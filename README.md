@@ -14,3 +14,7 @@ Demo of debugging CPython from CLion
 ## Screenshots
 
 ![](screenshot.png)
+
+Using the External Libraries navigation in Explorer you can see the CPython source and add breakpoints, simply rebuild and run the debugger to breakpoint into any part of CPython!
+
+![](screenshot3.png)
