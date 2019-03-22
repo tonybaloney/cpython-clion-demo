@@ -32,6 +32,38 @@ fatal(int exitcode, const char *format, const char *message)
 }
 
 
+int TraceFunc(PyObject * self, struct _frame * frame, int type, PyObject * arg){
+    char* type_msg = NULL;
+    switch (type){
+        case PyTrace_CALL:
+            type_msg = "Call()";
+            break;
+        case PyTrace_EXCEPTION:
+            type_msg = "Exception";
+            break;
+        case PyTrace_LINE:
+            type_msg = "Line trace";
+            break;
+        case PyTrace_RETURN:
+            type_msg = "Return";
+            break;
+        case PyTrace_C_CALL:
+            type_msg = "C call()";
+            break;
+        case PyTrace_C_EXCEPTION:
+            type_msg = "C Exception";
+            break;
+        case PyTrace_C_RETURN:
+            type_msg = "C Return";
+            break;
+        case PyTrace_OPCODE:
+            type_msg = "OPCODE";
+            break;
+    }
+    printf("Caught %s : %s\n", type_msg, PyUnicode_AsUTF8(PyObject_ASCII(arg)));
+    return 0;
+}
+
 int
 main(int argc, char **argv)
 {
@@ -64,6 +96,7 @@ main(int argc, char **argv)
     co = Py_CompileStringFlags(str, fn, Py_single_input, NULL);
 
     if (co == NULL) {
+        PyErr_Print();
         exit(-1);
     }
     arena = PyArena_New();
@@ -73,19 +106,27 @@ main(int argc, char **argv)
 
     PyObject* main = PyImport_AddModule("__main__");
     PyObject* globals = PyModule_GetDict(main);
+    // Turn on super-verbose tracing!
+    // PyDict_SetItem(globals, PyUnicode_FromString("__ltrace__"), PyLong_FromLong(1));
+
     PyObject* locals = PyDict_New();
 
     // Construct frame..
 
     PyThreadState* tstate = PyThreadState_Get();
-    assert(tstate != NULL);
+    PyEval_SetTrace(TraceFunc, NULL);
+
     if (tstate == NULL){
         fatal(1, "Failed to aquire threadstate", NULL);
     }
+    PyCodeObject *co_f = (PyCodeObject*)co;
     PyFrameObject* f = PyFrame_New(tstate, co, globals, locals);
     if (f == NULL) {
         return NULL;
     }
+
+    f->f_trace_lines = 0 ;
+    f->f_trace_opcodes = 1;
 
     PyObject *ret = PyEval_EvalFrame(f);
 
